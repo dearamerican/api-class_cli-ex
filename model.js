@@ -2,6 +2,12 @@
 
 const rp          = require('request-promise');
 
+// TODO: resolve this issue:
+  // "However, STREAMING THE RESPONSE (e.g. .pipe(...)) is DISCOURAGED
+  // because Request-Promise would grow the memory footprint for large
+  // requests unnecessarily high. Use the original Request library for
+  // that. You can use both libraries in the same project."
+                // Ref: https://github.com/request/request-promise
 module.exports = {
 
   checkForUser: (data) => {
@@ -103,4 +109,4 @@ module.exports = {
     });
   }
 
-}
+};

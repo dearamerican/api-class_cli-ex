@@ -16,7 +16,67 @@ var currCmd = {
   postId: ''
 };
 
-var startup = () => {
+var cmdMapping = {
+  list: (data) => {
+    return model.listPosts(data).then(resp => {
+      if (!resp.success) {
+        console.log(resp.message);
+      } else {
+        console.log('Here are your posts:', resp.data);
+      }
+      askWhatDoYouWantToDo();
+    });
+  },
+  create: (data) => {
+    return model.createNewPost(data).then(resp => {
+      console.log(resp.message);
+      askWhatDoYouWantToDo();
+    });
+  },
+  edit: (data) => {
+    return model.editPost(data)
+    .then(resp => {
+      console.log(resp.message);
+      askWhatDoYouWantToDo();
+    })
+  },
+  delete: (data) => {
+    return model.deletePost(data).then(resp => {
+      console.log(resp.message);
+      askWhatDoYouWantToDo();
+    })
+  },
+  signout: () => {
+    loggedInUser = null;
+    startup();
+  },
+};
+
+var helpers = {
+  newPassword: async () => {
+    const buffer = await crypto.randomBytes(16);
+    return buffer.toString('hex');
+  },
+  reqPasswordRetUser: (email) => {
+    return inquirer.password()
+      .then(password => {
+        var userData = { email: email, password: password };
+        return model.login(userData)
+      })
+      .then(data => {
+        if (data.data) {
+          loggedInUser = data.data;
+          console.log('Success! You\'ve been logged in as: ' +
+            loggedInUser.email);
+          askWhatDoYouWantToDo();
+        } else {
+          return helpers.reqPasswordRetUser(email);
+        }
+      });
+  }
+};
+
+const startup = () => {
   clear();
   console.log(
     chalk.yellow(
@@ -24,113 +84,6 @@ var startup = () => {
     )
   );
   database.createDb(run);
-};
-
-var cmdMapping = {
-  list: '',
-  create:'',
-  edit:'',
-  delete: '',
-  signout:'',
-};
-
-var signout = () => {
-  loggedInUser = null;
-  startup();
-};
-
-var newPassword = async () => {
-  const buffer = await crypto.randomBytes(16);
-  return buffer.toString('hex');
-};
-
-var reqPasswordRetUser = (email) => {
-  return inquirer.password()
-    .then(password => {
-      var userData = { email: email, password: password };
-      return model.login(userData)
-    })
-    .then(data => {
-      if (data.data) {
-        loggedInUser = data.data;
-        console.log('Success! You\'ve been logged in as: ' +
-          loggedInUser.email);
-        askWhatDoYouWantToDo();
-      } else {
-        return reqPasswordRetUser(email);
-      }
-    });
-};
-
-const askWhatDoYouWantToDo = () => {
-  currCmd = {
-    cmd: '',
-    postId: ''
-  };
-  return inquirer.command()
-  .then(cmd => {
-    if (Object.keys(cmdMapping).indexOf(cmd) < 0) {
-      console.log('Not a valid command. Try one of following:' +
-        '"list", "create", "edit", "delete", "signout".');
-      askWhatDoYouWantToDo();
-    }
-    else if (cmd === 'edit' || cmd === 'delete') {
-      currCmd.cmd = cmd;
-      inquirer.postId(cmd).then(id => {
-        currCmd.postId = id;
-        if (cmd === 'delete') {
-          return model.deletePost({
-            postId: id,
-            email: loggedInUser.email
-          }).then(resp => {
-            console.log(resp.message);
-            askWhatDoYouWantToDo();
-          })
-        }
-        if (cmd === 'edit') {
-          inquirer.editPost().then(content => {
-            return model.editPost({
-              postId: currCmd.postId,
-              email: loggedInUser.email,
-              content: content
-            })
-            .then(resp => {
-              console.log(resp.message);
-              askWhatDoYouWantToDo();
-            })
-          });
-        }
-      });
-    } else {
-      currCmd.cmd = cmd;
-      if (cmd === 'signout') {
-        signout();
-      }
-      if (cmd === 'list') {
-        return model.listPosts(loggedInUser).then(resp => {
-          if (!resp.success) {
-            console.log(resp.message);
-          } else {
-            console.log('Here are your posts:', resp.data);
-          }
-          askWhatDoYouWantToDo();
-        });
-      }
-      if (cmd === 'create') {
-        inquirer.createPost().then(postContent => {
-          var data = {
-            content: postContent,
-            email: loggedInUser.email
-          };
-          return model.createNewPost(data).then(resp => {
-            console.log(resp.message);
-            askWhatDoYouWantToDo();
-          });
-        });
-      }
-    }
-     
-  })
 };
 
 const run = () => {
@@ -145,11 +98,11 @@ const run = () => {
   .then(data => {
     // if user exists, ask for password
     if (data.success) {
-      reqPasswordRetUser(userEmail);
+      helpers.reqPasswordRetUser(userEmail);
     }
     // if user does not exist, create password
     else {
-      return newPassword()
+      return helpers.newPassword()
       .then(pw => {
         userPassword = pw;
         return model.createNewUser({ 'email': userEmail, 'password': pw })
@@ -157,11 +110,66 @@ const run = () => {
       .then(data => {
         if (data.success) {
           console.log('Your password to log in is:', userPassword);
-          reqPasswordRetUser(userEmail);
+          helpers.reqPasswordRetUser(userEmail);
         } else {
           console.log('Error, please exit and try again.');
         }
       });
+    }
+  })
+};
+
+const askWhatDoYouWantToDo = () => {
+  currCmd = {
+    cmd: '',
+    postId: ''
+  };
+  return inquirer.command()
+  .then(cmd => {
+    if (Object.keys(cmdMapping).indexOf(cmd) < 0) {
+      console.log('Not a valid command. Try one of following:' +
+        '"list", "create", "edit", "delete", "signout".');
+      askWhatDoYouWantToDo();
+    }
+    // Cmds that require postId
+    else if (cmd === 'edit' || cmd === 'delete') {
+      currCmd.cmd = cmd;
+      inquirer.postId(cmd).then(id => {
+        currCmd.postId = id;
+        if (cmd === 'delete') {
+          var data = {
+            postId: id,
+            email: loggedInUser.email
+          };
+          cmdMapping[cmd](data);
+        }
+        if (cmd === 'edit') {
+          inquirer.editPost().then(content => {
+            var data = {
+              postId: currCmd.postId,
+              email: loggedInUser.email,
+              content: content
+            };
+            cmdMapping[cmd](data);
+          });
+        }
+      });
+    } else {
+      if (cmd === 'signout') {
+        cmdMapping[cmd]();
+      }
+      if (cmd === 'list') {
+        cmdMapping[cmd](loggedInUser);
+      }
+      if (cmd === 'create') {
+        inquirer.createPost().then(postContent => {
+          var data = {
+            content: postContent,
+            email: loggedInUser.email
+          };
+          cmdMapping[cmd](data);
+        });
+      }
     }
   })
 };
