@@ -1,15 +1,13 @@
 #! /usr/bin/env node
 'use strict';
 
-const program     = require('commander');
 const chalk       = require('chalk');
 const clear       = require('clear');
 const figlet      = require('figlet');
 const crypto      = require('crypto-promise');
-const files       = require('./lib/files');
 const inquirer    = require('./lib/inquirer');
-const rp          = require('request-promise');
 const database    = require('./db/database.js');
+const model       = require('./model.js');
 
 var loggedInUser = null;
 
@@ -22,7 +20,7 @@ var startup = () => {
   clear();
   console.log(
     chalk.yellow(
-      figlet.textSync('API Ex. 1', { horizontalLayout: 'full' })
+      figlet.textSync('cli gist app', { horizontalLayout: 'full' })
     )
   );
   database.createDb(run);
@@ -34,105 +32,6 @@ var cmdMapping = {
   edit:'',
   delete: '',
   signout:'',
-};
-
-var checkForUser = (data) => {
-  return rp({
-    method: 'GET',
-    uri: 'http://localhost:3000/user',
-    qs: {
-      email: data.email
-    },
-    json: true,
-    simple: false
-  }).then(body => {
-    return body;
-  });
-};
-
-var createNewUser = (data) => {
-  return rp({
-    method: 'POST',
-    uri: 'http://localhost:3000/user/sign-up',
-    body: data,
-    json: true,
-    simple: false
-  })
-  .then(body => {
-    return body;
-  });
-};
-
-var createNewPost = (data) => {
-  return rp({
-    method: 'POST',
-    uri: 'http://localhost:3000/post/create',
-    body: data,
-    json: true,
-    simple: false
-  })
-  .then(body => {
-    return body;
-  });
-};
-
-var editPost = (data) => {
-  return rp({
-    method: 'POST',
-    uri: 'http://localhost:3000/post/edit',
-    body: data,
-    json: true,
-    simple: false
-  })
-  .then(body => {
-    return body;
-  });
-};
-
-var deletePost = (data) => {
-  return rp({
-    method: 'DELETE',
-    uri: 'http://localhost:3000/post/delete',
-    qs: {
-      email: data.email,
-      postId: data.postId
-    },
-    json: true,
-    simple: false
-  })
-  .then(body => {
-    return body;
-  });
-};
-
-var listPosts = (data) => {
-  return rp({
-    method: 'GET',
-    uri: 'http://localhost:3000/posts',
-    qs: {
-      email: data.email
-    },
-    json: true,
-    simple: false
-  })
-  .then(body => {
-    return body;
-  });
-};
-
-var login = (data) => {
-  return rp({
-    method: 'GET',
-    uri: 'http://localhost:3000/user/log-in',
-    qs: {
-      email: data.email,
-      password: data.password
-    },
-    json: true,
-    simple: false
-  }).then(body => {
-    return body;
-  });
 };
 
 var signout = () => {
@@ -149,7 +48,7 @@ var reqPasswordRetUser = (email) => {
   return inquirer.password()
     .then(password => {
       var userData = { email: email, password: password };
-      return login(userData)
+      return model.login(userData)
     })
     .then(data => {
       if (data.data) {
@@ -180,7 +79,7 @@ const askWhatDoYouWantToDo = () => {
       inquirer.postId(cmd).then(id => {
         currCmd.postId = id;
         if (cmd === 'delete') {
-          return deletePost({
+          return model.deletePost({
             postId: id,
             email: loggedInUser.email
           }).then(resp => {
@@ -190,7 +89,7 @@ const askWhatDoYouWantToDo = () => {
         }
         if (cmd === 'edit') {
           inquirer.editPost().then(content => {
-            return editPost({
+            return model.editPost({
               postId: currCmd.postId,
               email: loggedInUser.email,
               content: content
@@ -208,7 +107,7 @@ const askWhatDoYouWantToDo = () => {
         signout();
       }
       if (cmd === 'list') {
-        return listPosts(loggedInUser).then(resp => {
+        return model.listPosts(loggedInUser).then(resp => {
           if (!resp.success) {
             console.log(resp.message);
           } else {
@@ -223,7 +122,7 @@ const askWhatDoYouWantToDo = () => {
             content: postContent,
             email: loggedInUser.email
           };
-          return createNewPost(data).then(resp => {
+          return model.createNewPost(data).then(resp => {
             console.log(resp.message);
             askWhatDoYouWantToDo();
           });
@@ -241,7 +140,7 @@ const run = () => {
   .then(email => {
     userEmail = email;
     // check to see if user is in DB
-    return checkForUser({ email: email })
+    return model.checkForUser({ email: email })
   })
   .then(data => {
     // if user exists, ask for password
@@ -253,7 +152,7 @@ const run = () => {
       return newPassword()
       .then(pw => {
         userPassword = pw;
-        return createNewUser({ 'email': userEmail, 'password': pw })
+        return model.createNewUser({ 'email': userEmail, 'password': pw })
       })
       .then(data => {
         if (data.success) {

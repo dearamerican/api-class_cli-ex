@@ -25,30 +25,28 @@ var db;
   insertNewUser: (req, res) => {
     // Expected input: data = { email: ..., password: ... };
     var data = req.body;
-    console.log('Inserting new user...');
-    db.run("INSERT INTO users (email, password) " +
-           "VALUES ( '" + data.email + "', '" + data.password + "');",
-           (err) => {
-            if (err) {
-             return res.status(400).json({
-                success: false,
-                data: null,
-                message: err
-              });
-            }
-            return res.status(200).json({
-              success: true,
-              data: null,
-              message: 'User created.'
-            });
+    var sql = "INSERT INTO users (email, password) VALUES (?, ?)";
+    console.log('Creating new user...');
+    db.run(sql, [data.email, data.password], (err) => {
+      if (err) {
+       return res.status(400).json({
+          success: false,
+          data: null,
+          message: err
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        data: null,
+        message: 'User created.'
+      });
     });
   },
-
 
   login: (req, res) => {
     // Expected input: data = { email: ..., password: ... };
     var data = req.query;
-    var sql = `SELECT * FROM users WHERE email=? AND password=?`
+    var sql = "SELECT * FROM users WHERE email=? AND password=?";
     db.get(sql, [data.email, data.password], (err, row) => {
       if (err) {
         return res.status(404).json({
@@ -68,7 +66,7 @@ var db;
   findUserByEmail: (req, res) => {
     // Expected input: data = { email: ..., password: ... };
     var data = req.query;
-    var sql = `SELECT * FROM users WHERE email=?`
+    var sql = "SELECT * FROM users WHERE email=?";
     db.get(sql, [data.email], (err, row) => {
       if (err || !row) {
         return res.status(404).json({
@@ -88,7 +86,9 @@ var db;
   getPosts: (req, res) => {
     // Expected input: data = { email: ... };
     var data = req.query;
-    db.all("SELECT * FROM posts WHERE user_email=?", [data.email], (err, rows) => {
+    var sql = "SELECT * FROM posts WHERE user_email=?";
+    db.all(sql,
+      [data.email], (err, rows) => {
       if (err) {
         return res.status(404).json({
           success: false,
@@ -110,22 +110,24 @@ var db;
     var dateString = new Date().toISOString();
     data.created_date = dateString;
     data.last_edited_date = dateString;
-    db.run("INSERT INTO posts (user_email, content, created_date, " +
-      "last_edited_date)" +
-      "VALUES ('" + data.email + "', '" + data.content + "', '" +
-        data.created_date + "', '" + data.last_edited_date + "')", (err) => {
-          if (err) {
-           return res.status(400).json({
-              success: false,
-              data: null,
-              message: err
-            });
-          }
-          return res.status(200).json({
-            success: true,
+    var sql = "INSERT INTO posts (user_email, content, created_date, " +
+      "last_edited_date) VALUES (?, ?, ?, ?)";
+    db.run(
+      sql,
+      [data.email, data.content, data.created_date, data.last_edited_date],
+      (err) => {
+        if (err) {
+         return res.status(400).json({
+            success: false,
             data: null,
-            message: 'Post created!'
+            message: err
           });
+        }
+        return res.status(200).json({
+          success: true,
+          data: null,
+          message: 'Post created!'
+        });
     });
   },
 
@@ -134,8 +136,10 @@ var db;
     var data = req.body;
     var dateString = new Date().toISOString();
     data.last_edited_date = dateString;
+    var sql = "UPDATE posts SET content = ?, last_edited_date = ?" +
+      " WHERE user_email=? AND id=?";
     db.run(
-      "UPDATE posts SET content = ?, last_edited_date = ? WHERE user_email=? AND id=?",
+      sql,
       [data.content, data.last_edited_date, data.email, data.postId],
       (err, rows) => {
       if (err) {
@@ -156,10 +160,8 @@ var db;
   deletePost: (req, res) => {
     // Expected input: data = { email: ..., postId = ... };
     var data = req.query;
-    db.all(
-      "DELETE FROM posts WHERE user_email=? AND id=?",
-      [data.email, data.postId],
-      (err) => {
+    var sql = "DELETE FROM posts WHERE user_email=? AND id=?";
+    db.all(sql, [data.email, data.postId], (err) => {
       if (err) {
         return res.status(404).json({
           success: false,
