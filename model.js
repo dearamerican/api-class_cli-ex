@@ -46,7 +46,7 @@ module.exports = {
 
   editPost: (data) => {
     return rp({
-      method: 'POST',
+      method: 'PUT',
       uri: 'http://localhost:3000/post/edit',
       body: data,
       json: true,

@@ -18,7 +18,7 @@ module.exports = (app, express, router) => {
   app.post('/post/create',
           db.insertNewPost);
 
-  app.post('/post/edit',
+  app.put('/post/edit',
           db.editPost);
 
   app.delete('/post/delete',
