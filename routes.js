@@ -1,6 +1,4 @@
 var db = require('./db/database.js');
-const request = require('ajax-request');
-
 
 module.exports = (app, express, router) => {
   app.get('/user',
@@ -24,8 +22,3 @@ module.exports = (app, express, router) => {
   app.delete('/post/delete',
           db.deletePost);
 }
-
-
-
-
-

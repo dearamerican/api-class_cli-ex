@@ -12,18 +12,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ajax-request": "^1.2.3",
     "body-parser": "^1.18.2",
     "chalk": "^2.3.2",
     "clear": "^0.1.0",
-    "clui": "^0.3.6",
-    "commander": "^2.15.1",
     "configstore": "^3.1.2",
     "crypto-promise": "^2.0.0",
     "express": "^4.16.3",
     "figlet": "^1.2.0",
     "inquirer": "^5.2.0",
-    "minimist": "^1.2.0",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "sqlite3": "^4.0.0"
